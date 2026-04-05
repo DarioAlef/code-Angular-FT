@@ -5,7 +5,7 @@ Compara respostas ANTES (modelo base) vs DEPOIS (com adaptador).
 """
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
 import json
 import os
@@ -14,9 +14,17 @@ import os
 # CONFIGURAÇÃO
 # ============================================================================
 
-MODEL_ID = "Qwen/Qwen2.5-Coder-7B"
+MODEL_ID = "Qwen/Qwen2.5-Coder-3B-Instruct"
 ADAPTER_PATH = "./adapter_qlora"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Configuração de quantização para inferência (economia de VRAM)
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=True,
+)
 
 # Prompts de teste (10 exemplos)
 TEST_PROMPTS = [
@@ -42,7 +50,7 @@ def load_base_model(model_id: str):
 
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=torch.float16,
+        quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
     )
@@ -58,10 +66,10 @@ def load_finetuned_model(model_id: str, adapter_path: str):
     print(f"📥 Carregando modelo base: {model_id}")
     print(f"🔧 Aplicando adaptador: {adapter_path}")
 
-    # Carrega modelo base
+    # Carrega modelo base quantizado
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=torch.float16,
+        quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
     )
@@ -70,7 +78,7 @@ def load_finetuned_model(model_id: str, adapter_path: str):
     model = PeftModel.from_pretrained(model, adapter_path)
 
     # Merge (opcional, mais rápido para inferência)
-    model = model.merge_and_unload()
+    # model = model.merge_and_unload()
 
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     if tokenizer.pad_token is None:

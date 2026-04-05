@@ -12,25 +12,30 @@ Processo:
 import os
 import json
 import re
+import time
 from pathlib import Path
-import google.generativeai as genai
 from typing import Optional
+import google.generativeai as genai
+from utils.config import settings
 
 # ============================================================================
 # CONFIGURAÇÃO
 # ============================================================================
 
-# Substituir por sua chave de API (obtenha em https://makersuite.google.com/app/apikeys)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your-api-key-here")
+# Substituir por sua chave de API
+GEMINI_API_KEY = settings.GEMINI_API_KEY
 
 # Padrão para detectar componentes que estendem BaseComponent
 COMPONENT_PATTERN = r'export\s+class\s+(\w+)\s+extends\s+BaseComponent'
 
 # Diretório raiz do skeleton-web
-SKELETON_WEB_DIR = "./skeleton-web/src/app"
+SKELETON_WEB_DIR = "skeleton-web/src/app"
 
 # Arquivo de saída
 OUTPUT_FILE = "dados_2026.jsonl"
+
+# Modelo Gemini (Se falhar, use o script src/list_models.py para ver nomes corretos)
+GEMINI_MODEL_NAME = "gemini-2.5-flash" 
 
 # ============================================================================
 # FUNÇÕES PRINCIPAIS
@@ -39,7 +44,7 @@ OUTPUT_FILE = "dados_2026.jsonl"
 def setup_gemini(api_key: str):
     """Configura a API do Gemini."""
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-pro")
+    return genai.GenerativeModel(GEMINI_MODEL_NAME)
 
 def find_component_files(root_dir: str) -> list[str]:
     """
@@ -62,18 +67,21 @@ def extract_component_code(file_path: str) -> Optional[str]:
     """
     Extrai o código da classe que estende BaseComponent.
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
 
-    # Procura a classe que estende BaseComponent
-    match = re.search(
-        r'(export\s+class\s+\w+\s+extends\s+BaseComponent.*?(?=\n^(?:export|import|\Z)))',
-        content,
-        re.MULTILINE | re.DOTALL
-    )
+        # Procura a classe que estende BaseComponent
+        match = re.search(
+            r'(export\s+class\s+\w+\s+extends\s+BaseComponent.*?(?=\n^(?:export|import|\Z)))',
+            content,
+            re.MULTILINE | re.DOTALL
+        )
 
-    if match:
-        return match.group(0).strip()
+        if match:
+            return match.group(0).strip()
+    except Exception as e:
+        print(f"  ⚠️  Erro ao ler arquivo: {e}")
 
     return None
 
@@ -122,116 +130,89 @@ def generate_instruction_fallback(file_path: str, component_code: str) -> str:
     else:
         return f"Crie um componente Angular chamado {title}"
 
+def save_sample(pair: dict, output_file: str):
+    """Salva um único par no arquivo JSONL imediatamente."""
+    item_clean = {k: v for k, v in pair.items() if k != 'source'}
+    with open(output_file, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(item_clean, ensure_ascii=False) + "\n")
+
 def process_components(root_dir: str, gemini_model, max_samples: Optional[int] = None):
     """
-    Processa todos os componentes e gera dataset.
+    Processa componentes e gera dataset com salvamento incremental.
     """
     component_files = find_component_files(root_dir)
-
     print(f"\n📂 Encontrados {len(component_files)} componentes")
 
     if max_samples:
         component_files = component_files[:max_samples]
-        print(f"⚙️  Limitando a {max_samples} primeiros componentes para teste")
+        print(f"⚙️  Limitando a {max_samples} primeiros componentes")
 
-    dataset = []
+    # Limpa o arquivo de saída antes de começar ou avisa que vai concatenar
+    if os.path.exists(OUTPUT_FILE):
+        print(f"⚠️  Arquivo {OUTPUT_FILE} já existe. Novos dados serão adicionados ao final.")
 
-    for idx, file_path in enumerate(component_files, 1):
-        print(f"\n[{idx}/{len(component_files)}] Processando: {file_path}")
+    count = 0
+    try:
+        for idx, file_path in enumerate(component_files, 1):
+            print(f"\n[{idx}/{len(component_files)}] Processando: {file_path}")
 
-        # Extrai código da classe
-        code = extract_component_code(file_path)
-        if not code:
-            print(f"  ⚠️  Não foi possível extrair classe BaseComponent")
-            continue
+            code = extract_component_code(file_path)
+            if not code:
+                print(f"  ⚠️  Não foi possível extrair classe BaseComponent")
+                continue
 
-        print(f"  ✅ Código extraído ({len(code)} caracteres)")
+            print(f"  ✅ Código extraído ({len(code)} caracteres)")
+            code_truncated = truncate_code(code)
 
-        # Trunca se necessário
-        code_truncated = truncate_code(code)
+            instruction = None
+            if gemini_model:
+                instruction = generate_instruction_with_gemini(gemini_model, code_truncated)
+                time.sleep(2) # Evitar rate limit da API gratuita
 
-        # Gera instrução com Gemini
-        instruction = None
-        if gemini_model:
-            instruction = generate_instruction_with_gemini(gemini_model, code_truncated)
+            if not instruction:
+                print(f"  📝 Usando fallback para instrução")
+                instruction = generate_instruction_fallback(file_path, code)
 
-        # Fallback se Gemini falhar ou não estiver configurado
-        if not instruction:
-            print(f"  📝 Usando fallback para instrução")
-            instruction = generate_instruction_fallback(file_path, code)
+            pair = {
+                "instruction": instruction,
+                "response": code,
+                "source": file_path
+            }
 
-        # Cria par (instruction, response)
-        pair = {
-            "instruction": instruction,
-            "response": code,
-            "source": file_path  # Útil para debugging
-        }
+            save_sample(pair, OUTPUT_FILE)
+            count += 1
+            print(f"  💾 Salvo com sucesso! ({count} total)")
+            print(f"  📝 Instrução: {instruction[:70]}...")
 
-        dataset.append(pair)
-        print(f"  📝 Instrução: {instruction[:80]}...")
+    except KeyboardInterrupt:
+        print("\n\n🛑 Processo interrompido pelo usuário!")
+        print(f"✅ O progresso até agora ({count} exemplos) foi salvo em {OUTPUT_FILE}")
 
-    return dataset
-
-def save_dataset(dataset: list[dict], output_file: str):
-    """
-    Salva dataset em formato JSONL (uma linha por exemplo).
-    """
-    with open(output_file, 'w', encoding='utf-8') as f:
-        for item in dataset:
-            # Remove campo 'source' antes de salvar
-            item_clean = {k: v for k, v in item.items() if k != 'source'}
-            f.write(json.dumps(item_clean, ensure_ascii=False) + "\n")
-
-    print(f"\n✅ Dataset salvo em: {output_file}")
-    print(f"   Total de exemplos: {len(dataset)}")
-
-def display_samples(dataset: list[dict], num_samples: int = 3):
-    """Exibe alguns exemplos do dataset."""
-    print(f"\n{'='*80}")
-    print(f"PREVIEW: Primeiros {min(num_samples, len(dataset))} exemplos")
-    print(f"{'='*80}\n")
-
-    for idx, item in enumerate(dataset[:num_samples], 1):
-        print(f"EXEMPLO {idx}:")
-        print(f"  📝 Instrução:\n    {item['instruction']}")
-        print(f"\n  💻 Resposta (primeiros 300 chars):\n    {item['response'][:300]}...")
-        print(f"\n{'-'*80}\n")
-
-# ============================================================================
-# MAIN
-# ============================================================================
+    return count
 
 def main():
     print("🚀 Iniciando geração de dataset sintético...")
-    print(f"🔑 API Key Gemini: {'✅ Configurada' if GEMINI_API_KEY != 'your-api-key-here' else '❌ NÃO CONFIGURADA'}")
+    print(f"🔑 API Key Gemini: {'✅ Configurada' if GEMINI_API_KEY else '❌ NÃO CONFIGURADA'}")
 
-    # Verifica se diretório existe
     if not os.path.exists(SKELETON_WEB_DIR):
         print(f"❌ Erro: Diretório {SKELETON_WEB_DIR} não encontrado")
         return
 
-    # Configura Gemini
-    if GEMINI_API_KEY != "your-api-key-here":
-        gemini_model = setup_gemini(GEMINI_API_KEY)
-        print("✅ Gemini configurado")
+    if GEMINI_API_KEY:
+        try:
+            gemini_model = setup_gemini(GEMINI_API_KEY)
+            print(f"✅ Gemini configurado (Modelo: {GEMINI_MODEL_NAME})")
+        except Exception as e:
+            print(f"⚠️  Erro ao configurar modelo: {e}. Usaremos fallback.")
+            gemini_model = None
     else:
         print("⚠️  Chave Gemini não configurada. Usaremos fallback para instruções.")
         gemini_model = None
 
-    # Processa componentes (limita a 10 para teste rápido)
-    dataset = process_components(SKELETON_WEB_DIR, gemini_model, max_samples=10)
+    total = process_components(SKELETON_WEB_DIR, gemini_model)
 
-    if not dataset:
-        print("❌ Nenhum componente foi processado!")
-        return
-
-    # Salva dataset
-    save_dataset(dataset, OUTPUT_FILE)
-
-    # Exibe preview
-    display_samples(dataset)
-
-    print("✅ Processo concluído!")
+    print(f"\n✅ Processo concluído! Total de exemplos: {total}")
+    print(f"📂 Arquivo gerado: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()

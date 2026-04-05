@@ -26,7 +26,7 @@ import os
 # CONFIGURAÇÃO
 # ============================================================================
 
-MODEL_ID = "Qwen/Qwen2.5-Coder-7B"  # Modelo base
+MODEL_ID = "Qwen/Qwen2.5-Coder-3B-Instruct"  # Modelo base
 ADAPTER_OUTPUT = "./adapter_qlora"   # Pasta para salvar adaptador
 DATASET_FILE = "dados_2026.jsonl"    # Dataset de treinamento
 
@@ -59,19 +59,19 @@ LORA_CONFIG = {
 # Configuração de Treinamento
 TRAINING_CONFIG = {
     "output_dir": "./checkpoints",
-    "num_train_epochs": 3,              # 3 épocas
-    "per_device_train_batch_size": 4,   # Batch size (ajuste se GPU pequena)
-    "gradient_accumulation_steps": 4,   # Acumula gradientes
-    "learning_rate": 2e-4,              # Taxa de aprendizado
-    "lr_scheduler_type": "cosine",      # Scheduler
+    "num_train_epochs": 3,
+    "per_device_train_batch_size": 1,   # MUDOU DE 4 PARA 1
+    "gradient_accumulation_steps": 16, # MUDOU DE 4 PARA 16
+    "learning_rate": 2e-4,
+    "lr_scheduler_type": "cosine",
     "warmup_steps": 100,
-    "save_steps": 50,                   # Salva checkpoint a cada 50 passos
-    "save_total_limit": 3,              # Mantém apenas 3 checkpoints
-    "logging_steps": 10,
-    "optim": "paged_adamw_8bit",        # Otimizador memory-efficient
+    "save_steps": 50,
+    "save_total_limit": 3,
+    "logging_steps": 1,                # LOG em cada passo para acompanhar
+    "optim": "paged_adamw_8bit",
     "seed": 42,
     "fp16": False,
-    "bf16": True,                       # Usa bfloat16 se disponível
+    "bf16": True,
 }
 
 # ============================================================================
@@ -179,14 +179,16 @@ def format_chat_template(examples):
 
     return {"text": formatted_prompts}
 
+from trl import SFTTrainer, SFTConfig
+from datasets import load_dataset
+import json
+import os
+
+# ... (mantendo o resto do código anterior até TRAINING_CONFIG)
+
 def train_model(model, tokenizer, dataset):
     """Executa o treinamento."""
     print(f"\n🚀 Iniciando treinamento...")
-
-    # Configura argumentos de treinamento
-    training_args = TrainingArguments(
-        **TRAINING_CONFIG
-    )
 
     # Formata dataset
     print(f"📝 Formatando dataset...")
@@ -196,16 +198,21 @@ def train_model(model, tokenizer, dataset):
         remove_columns=dataset["train"].column_names,
     )
 
-    # Cria trainer
+    # Configura argumentos modernos do TRL (SFTConfig)
+    sft_config = SFTConfig(
+        dataset_text_field="text",
+        max_length=1024,                  # MUDOU DE 2048 PARA 1024
+        packing=True,
+        **TRAINING_CONFIG
+    )
+
+    # Cria trainer com process_class (novo padrão para tokenizer)
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
-        args=training_args,
+        args=sft_config,
         train_dataset=dataset_formatted["train"],
         eval_dataset=dataset_formatted["test"],
-        dataset_text_field="text",
-        max_seq_length=2048,
-        packing=True,  # Empacotar exemplos para eficiência
+        processing_class=tokenizer,
     )
 
     # Executa treinamento

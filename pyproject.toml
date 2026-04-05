@@ -9,11 +9,12 @@ dependencies = [
     "bitsandbytes>=0.49.2",
     "datasets>=4.8.4",
     "google-generativeai>=0.8.6",
+    "groq>=1.1.2",
     "peft>=0.18.1",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "torch>=2.11.0",
     "transformers>=5.5.0",
     "trl>=1.0.0",
-    "unsloth>=2025.7.2",
+    "unsloth[colab-new]>=2025.7.2",
 ]

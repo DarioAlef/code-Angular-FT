@@ -3,3 +3,5 @@
 .cache/
 __pycache__/
 skeleton-web/
+data/checkpoints/
+data/adapter_qlora/

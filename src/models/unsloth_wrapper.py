@@ -1,8 +1,8 @@
 # src/models/unsloth_wrapper.py
+from unsloth import FastLanguageModel
+from unsloth.chat_templates import get_chat_template
 import logging
 from typing import Tuple
-
-from unsloth import FastLanguageModel
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +14,12 @@ class UnslothModel:
         self,
         model_id: str,
         max_seq_length: int = 2048,
-        dtype: str = "float16",
+        dtype=None,
         load_in_4bit: bool = True,
     ):
         """
-        Inicializa o wrapper.
-
         Args:
-            model_id: ID do modelo (ex: unsloth/Qwen2.5-Coder-3B-bnb-4bit)
+            model_id: ID do modelo (ex: unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit)
             max_seq_length: Comprimento máximo de sequência
             dtype: Tipo de dados (float16, bfloat16)
             load_in_4bit: Usar quantização 4-bit
@@ -33,7 +31,7 @@ class UnslothModel:
 
     def load_model(self) -> Tuple:
         """
-        Carrega modelo com FastLanguageModel (2-3x mais rápido).
+        Carrega modelo com FastLanguageModel e aplica chat template nativo Qwen 2.5.
 
         Returns:
             Tupla (model, tokenizer)
@@ -47,27 +45,30 @@ class UnslothModel:
             load_in_4bit=self.load_in_4bit,
         )
 
+        # Aplica chat template NATIVO do Qwen 2.5 (ChatML com <|im_start|>)
+        tokenizer = get_chat_template(tokenizer, chat_template="qwen-2.5")
+        logger.info("✅ Chat template Qwen 2.5 aplicado ao tokenizer")
+
         logger.info(f"✅ Modelo carregado")
         return model, tokenizer
 
-    def setup_lora(self, model, rank: int = 16):
+    def setup_lora(self, model, rank: int = 16, alpha: int = 16, dropout: float = 0.05):
         """
         Configura LoRA para QLoRA fine-tuning.
 
         Args:
             model: Modelo carregado
             rank: Rank do adaptador
-
-        Returns:
-            Modelo com LoRA aplicado
+            alpha: LoRA alpha (scaling = alpha/rank)
+            dropout: LoRA dropout para regularização
         """
-        logger.info("🔧 Configurando LoRA com Unsloth...")
+        logger.info(f"🔧 Configurando LoRA (r={rank}, alpha={alpha}, dropout={dropout})...")
 
         model = FastLanguageModel.get_peft_model(
             model,
             r=rank,
-            lora_alpha=32,
-            lora_dropout=0.05,
+            lora_alpha=alpha,
+            lora_dropout=dropout,
             bias="none",
             use_gradient_checkpointing="unsloth",
             random_state=42,
@@ -87,15 +88,7 @@ class UnslothModel:
 
     @staticmethod
     def prepare_for_inference(model):
-        """
-        Prepara modelo para inferência (remove LoRA overhead).
-
-        Args:
-            model: Modelo com LoRA
-
-        Returns:
-            Modelo preparado para inferência
-        """
+        """Prepara modelo para inferência (remove LoRA overhead)."""
         return FastLanguageModel.for_inference(model)
 
 

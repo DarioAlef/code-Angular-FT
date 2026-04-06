@@ -1,14 +1,15 @@
 import shutil
 import os
 from pathlib import Path
+from src.utils.config import settings
 
 def collect_components():
-    # Base directory to search
+    # Base directory to search (keep input external as per plan D3)
     base_dir = Path("skeleton-web")
-    # Destination directory (relative to project root)
-    dest_dir = Path("data/datasets")
+    # Destination directory from settings
+    dest_dir = settings.paths.components_dir
     
-    # Ensure we are in the project root by checking for skeleton-web
+    # Ensure BASE directory exists
     if not base_dir.exists():
         print(f"Error: Directory '{base_dir}' not found. Run this from the project root.")
         return
@@ -36,5 +37,8 @@ def collect_components():
 
     print(f"Successfully stored {count} components in {dest_dir}")
 
-if __name__ == "__main__":
+def main():
     collect_components()
+
+if __name__ == "__main__":
+    main()

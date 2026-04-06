@@ -2,6 +2,16 @@
 .env
 .cache/
 __pycache__/
+*.pyc
+unsloth_compiled_cache/
+
+# Data and artifacts
+data/
+checkpoints/
+adapter_qlora/
 skeleton-web/
-data/checkpoints/
-data/adapter_qlora/
+
+# Python packaging
+*.egg-info/
+code_angular_ft.egg-info
+src/code_angular_ft.egg-info/

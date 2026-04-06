@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
 
     @field_validator(
-        "GEMINI_API_KEY",
+        "GROQ_API_KEY",
         mode="before",
     )
     @classmethod
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
         return v
 
     # Gemini
-    GEMINI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

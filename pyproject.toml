@@ -14,7 +14,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "torch>=2.11.0",
-    "transformers>=5.5.0",
-    "trl>=1.0.0",
-    "unsloth[colab-new]>=2025.7.2",
+    "transformers>=4.43.0,<4.50.0",
+    "trl>=0.8.0,<1.0.0",
+    "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git",
 ]

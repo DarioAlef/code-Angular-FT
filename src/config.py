@@ -1,71 +1,43 @@
 # src/config.py
 from pathlib import Path
-from typing import Optional
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Configurações centralizadas do projeto"""
+    """Carrega configurações do .env automaticamente"""
 
-    # Groq API
-    groq_api_key: str = Field(default="", description="Chave API do Groq")
-    groq_model: str = Field(
-        default="llama-3.3-70b-versatile",
-        description="Modelo Groq para gerar variações"
-    )
+    # Groq API (OBRIGATÓRIOS do .env)
+    groq_api_key: str
+    groq_model: str = "openai/gpt-oss-20b"
 
-    # Unsloth + Modelo
-    model_id: str = Field(
-        default="unsloth/Qwen2.5-Coder-3B-bnb-4bit",
-        description="Modelo Qwen quantizado para Unsloth"
-    )
-    max_seq_length: int = Field(default=2048, description="Comprimento máximo de sequência")
+    # Groq Parameters (OTIMIZADOS)
+    groq_max_tokens: int = 1024          # 5 instruções
+    groq_temperature: float = 0.5        # Consistência
+    groq_timeout: int = 45               # 45 segundos
+    groq_delay_seconds: float = 0.3      # 300ms
+
+    # Unsloth
+    model_id: str = "unsloth/Qwen2.5-Coder-3B-bnb-4bit"
+    max_seq_length: int = 2048
 
     # Training
-    output_dir: Path = Field(default=Path("./checkpoints"), description="Diretório de checkpoints")
-    adapter_dir: Path = Field(default=Path("./adapter_qlora_v2"), description="Diretório do adaptador LoRA")
-    num_epochs: int = Field(default=3, description="Número de épocas de treinamento")
-    batch_size: int = Field(default=4, description="Batch size")
-    learning_rate: float = Field(default=2e-4, description="Learning rate")
-    lora_rank: int = Field(default=16, description="LoRA rank")
-    lora_alpha: int = Field(default=32, description="LoRA alpha")
-    lora_dropout: float = Field(default=0.05, description="LoRA dropout")
+    num_epochs: int = 3
+    batch_size: int = 4
+    learning_rate: float = 2e-4
 
-    # Dataset
-    dataset_file: Path = Field(default=Path("./dados_2026.jsonl"), description="Arquivo JSONL do dataset")
-    train_split: float = Field(default=0.9, description="Proporção train/test")
-    skeleton_web_dir: Path = Field(
-        default=Path("./skeleton-web/src/app/components"),
-        description="Diretório com componentes Angular"
-    )
-
-    # Groq Generation
-    groq_max_tokens: int = Field(default=800, description="Max tokens para Groq")
-    groq_temperature: float = Field(default=0.7, description="Temperatura do Groq")
-    groq_timeout: int = Field(default=30, description="Timeout Groq em segundos")
-    groq_delay_seconds: float = Field(default=0.5, description="Delay entre requisições Groq")
+    # Paths
+    dataset_file: Path = Path("dados_2026.jsonl")
+    adapter_dir: Path = Path("adapter_qlora_v2")
+    skeleton_web_dir: Path = Path("skeleton-web/src/app/components")
 
     # Inference
-    test_prompts_file: Optional[Path] = Field(
-        default=None, description="Arquivo com prompts de teste"
-    )
-    comparison_report_file: Path = Field(
-        default=Path("./comparison_report.json"),
-        description="Arquivo de saída com comparação"
-    )
-    inference_max_tokens: int = Field(default=512, description="Max tokens para inferência")
+    inference_temperature: float = 0.1
+    inference_max_tokens: int = 512
 
-    # Logging
-    log_level: str = Field(default="INFO", description="Nível de logging")
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
-    )
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
 
 
-# Instância global
+# Carrega automaticamente do .env
 settings = Settings()

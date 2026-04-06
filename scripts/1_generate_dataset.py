@@ -51,24 +51,15 @@ def main(max_samples: int = None):
     logger.info("=" * 80)
 
     # Valida API key
-    if not settings.groq_api_key or settings.groq_api_key == "":
-        logger.error("❌ GROQ_API_KEY não configurada!")
-        logger.error("   Configure em .env: GROQ_API_KEY=gsk_...")
+    if not settings.groq_api_key:
+        logger.error("❌ GROQ_API_KEY não configurada no .env!")
         return False
 
-    logger.info(f"✅ Groq API Key configurada")
-    logger.info(f"   Modelo: {settings.groq_model}")
+    logger.info(f"✅ Usando: {settings.groq_model}")
 
-    # Inicializa Groq
+    # Inicializa Groq (carrega .env automaticamente)
     try:
-        groq = GroqInstructionGenerator(
-            api_key=settings.groq_api_key,
-            model=settings.groq_model,
-            max_tokens=settings.groq_max_tokens,
-            temperature=settings.groq_temperature,
-            timeout=settings.groq_timeout,
-            delay_seconds=settings.groq_delay_seconds,
-        )
+        groq = GroqInstructionGenerator()
         logger.info("✅ Groq cliente inicializado")
     except Exception as e:
         logger.error(f"❌ Erro ao inicializar Groq: {e}")

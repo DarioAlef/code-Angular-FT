@@ -3,154 +3,103 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from tqdm import tqdm
 
 from src.clients.groq_client import GroqInstructionGenerator
 from src.config import settings
-from src.utils.paths import ProjectPaths
 
 logger = logging.getLogger(__name__)
 
 
 class DatasetGenerator:
-    """
-    Gera dataset a partir de componentes Angular com MÚLTIPLAS VARIAÇÕES.
-
-    CORREÇÃO CRÍTICA: Para cada componente extraído, gera 5 pares (instruction, response).
-    Evita underfitting quando o repositório tem poucos componentes.
-    """
-
-    COMPONENT_PATTERN = r"export\s+class\s+(\w+)\s+extends\s+BaseComponent"
+    """Extrai componentes Angular e gera 5 instruções por componente com Groq"""
 
     def __init__(self, groq_client: GroqInstructionGenerator):
-        """
-        Inicializa o gerador.
-
-        Args:
-            groq_client: Cliente Groq configurado
-        """
         self.groq = groq_client
 
-    def find_components(self, root_dir: Path) -> List[Path]:
+    def find_components(self) -> list:
+        """Encontra todos os .component.ts no skeleton-web"""
+        components_dir = settings.skeleton_web_dir
+        if not components_dir.exists():
+            logger.error(f"❌ Diretório não encontrado: {components_dir}")
+            return []
+
+        files = list(components_dir.glob("**/*.component.ts"))
+        logger.info(f"🔍 Encontrados {len(files)} componentes")
+        return sorted(files)
+
+    def extract_full_component(self, file_path: Path) -> Optional[str]:
+        """Extrai arquivo .ts COMPLETO com imports, decorator e implementação"""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Valida se tem BaseComponent
+            if "extends BaseComponent" not in content:
+                return None
+
+            return content.strip()
+        except Exception as e:
+            logger.error(f"Erro ao extrair {file_path}: {e}")
+            return None
+
+    def generate_dataset(self, max_samples: Optional[int] = None) -> list:
         """
-        Encontra todos .component.ts no diretório.
-
-        Args:
-            root_dir: Raiz do projeto
-
-        Returns:
-            Lista de caminhos de componentes
+        Gera dataset com 5 instruções por componente.
+        50 componentes × 5 = 250 pares
         """
-        components = list(root_dir.glob("**/*.component.ts"))
-        return sorted(components)
-
-    def extract_code(self, file_path: Path) -> Optional[str]:
-        """
-        Extrai classe que estende BaseComponent.
-
-        Args:
-            file_path: Caminho do arquivo .component.ts
-
-        Returns:
-            Código da classe ou None
-        """
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        match = re.search(
-            r"(export\s+class\s+\w+\s+extends\s+BaseComponent.*?(?=\n^(?:export|import|\Z)))",
-            content,
-            re.MULTILINE | re.DOTALL,
-        )
-        return match.group(0).strip() if match else None
-
-    def generate_dataset(self, max_samples: Optional[int] = None) -> List[Dict]:
-        """
-        Gera dataset com MÚLTIPLAS INSTRUÇÕES por componente.
-
-        Se houver 50 componentes e 5 variações cada = 250 pares.
-        Isso elimina underfitting e melhora generalização.
-
-        Args:
-            max_samples: Número máximo de componentes a processar
-
-        Returns:
-            Lista de dicts com instruction e response
-        """
-        components = self.find_components(ProjectPaths.SYNTHETIC_DIR)
+        components = self.find_components()
 
         if max_samples:
             components = components[:max_samples]
+            logger.info(f"⚙️  Limitando a {max_samples} componentes (teste)")
 
-        logger.info(f"🔍 Encontrados {len(components)} componentes")
-        logger.info(
-            f"📊 Esperado: {len(components) * 5} pares de treinamento (5 variações cada)"
-        )
+        logger.info(f"📊 Esperado: {len(components) * 5} pares de treinamento")
 
         dataset = []
-        failed_components = 0
+        failed = 0
 
-        for component_file in tqdm(
-            components, desc="Gerando dataset com 5 variações"
-        ):
-            code = self.extract_code(component_file)
+        for comp_file in tqdm(components, desc="Gerando com Groq"):
+            code = self.extract_full_component(comp_file)
+
             if not code:
-                logger.warning(f"❌ Não foi possível extrair: {component_file}")
-                failed_components += 1
+                failed += 1
                 continue
 
-            # Trunca se muito longo (Groq tem limite de tokens)
-            code_truncated = (
-                code[:1500] + "..." if len(code) > 1500 else code
-            )
-
-            # Gera 5 variações com Groq
-            instructions = self.groq.generate(code_truncated)
+            # Groq gera 5 instruções para esse componente completo
+            instructions = self.groq.generate(code)
 
             if not instructions:
-                # Fallback: cria 1 instrução simples, não 5
-                logger.warning(
-                    f"⚠️  Fallback para {component_file.stem}"
-                )
-                name = component_file.stem.replace(".component", "")
-                instructions = [f"Crie um componente Angular para {name}"]
+                # Fallback
+                name = comp_file.stem.replace(".component", "")
+                instructions = [f"Crie um componente Angular completo para {name}"]
 
-            # Cria pares (instruction, response) para cada variação
+            # Cria 5 pares (instruction, response) por componente
+            # response = arquivo .ts COMPLETO (imports, decorator, métodos)
             for instruction in instructions:
-                if instruction.strip():  # Garante que instrução não está vazia
-                    dataset.append(
-                        {
-                            "instruction": instruction.strip(),
-                            "response": code,
-                        }
-                    )
+                if instruction.strip():
+                    dataset.append({
+                        "instruction": instruction.strip(),
+                        "response": code
+                    })
 
-        logger.info(f"\n📈 Dataset Final:")
-        logger.info(
-            f"   Componentes processados: {len(components) - failed_components}"
-        )
-        logger.info(f"   Componentes com falha: {failed_components}")
-        logger.info(f"   Total de pares: {len(dataset)}")
+        logger.info(f"\n✅ Processados: {len(components) - failed} componentes")
+        logger.info(f"⚠️  Falhados: {failed}")
+        logger.info(f"📈 Total pares: {len(dataset)}")
 
         return dataset
 
-    def save(self, dataset: List[Dict], output_file: Path):
-        """
-        Salva em JSONL.
+    def save(self, dataset: list, output_file: Optional[Path] = None):
+        """Salva em JSONL (uma linha por par)"""
+        output = output_file or settings.dataset_file
 
-        Args:
-            dataset: Lista de dicts
-            output_file: Caminho do arquivo de saída
-        """
-        with open(output_file, "w", encoding="utf-8") as f:
+        with open(output, "w", encoding="utf-8") as f:
             for item in dataset:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-        logger.info(
-            f"✅ Dataset salvo: {output_file} ({len(dataset)} exemplos)"
-        )
+        logger.info(f"✅ Dataset salvo: {output} ({len(dataset)} exemplos)")
 
 
 __all__ = ["DatasetGenerator"]

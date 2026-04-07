@@ -6,6 +6,7 @@ from unsloth.chat_templates import train_on_responses_only
 
 from src.training.utils import get_training_args
 from src.utils.config import TrainingConfig
+from src.evaluation.metrics_logger import MetricsLoggerCallback
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,10 @@ class QLoRATrainer:
             remove_columns=dataset["train"].column_names,
         )
 
+        metrics_logger = MetricsLoggerCallback(
+            output_dir=Path(self.output_dir) / "metrics"
+        )
+
         trainer = SFTTrainer(
             model=model,
             tokenizer=tokenizer,
@@ -53,7 +58,10 @@ class QLoRATrainer:
             dataset_text_field="text",
             max_seq_length=self.config.max_seq_length,
             packing=False,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience)],
+            callbacks=[
+                EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience),
+                metrics_logger,
+            ],
         )
 
         trainer = train_on_responses_only(

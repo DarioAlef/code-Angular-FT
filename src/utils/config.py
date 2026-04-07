@@ -40,12 +40,13 @@ class PathsConfig(BaseModel):
     dataset_file: Path = PROJECT_ROOT / "data" / "datasets" / "augmented" / "augmented_dataset.jsonl"
     adapter_dir: Path = PROJECT_ROOT / "data" / "adapter_qlora_v2"
     output_dir: Path = PROJECT_ROOT / "data" / "output_qlora_v2"
+    metrics_dir: Path = PROJECT_ROOT / "data" / "output_qlora_v2" / "metrics"
     merged_model_dir: Path = PROJECT_ROOT / "data" / "merged_model"
     comparison_report: Path = PROJECT_ROOT / "data" / "comparison_report.json"
     components_dir: Path = PROJECT_ROOT / "data" / "datasets" / "pre-selected"
 
     def ensure_dirs(self):
-        for p in [self.data, self.datasets, self.adapter_dir, self.output_dir]:
+        for p in [self.data, self.datasets, self.adapter_dir, self.output_dir, self.metrics_dir]:
             p.mkdir(parents=True, exist_ok=True)
 
 

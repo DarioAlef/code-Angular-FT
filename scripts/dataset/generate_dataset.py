@@ -3,8 +3,8 @@
 Script 1: Gera dataset extraindo componentes Angular + instruções via Groq Cloud.
 
 Uso:
-    python scripts/1_generate_dataset.py --max-samples 10
-    python scripts/1_generate_dataset.py                    # Todos
+    python scripts/dataset/generate_dataset.py --max-samples 10
+    python scripts/dataset/generate_dataset.py                    # Todos
 """
 
 import argparse
@@ -86,7 +86,7 @@ def main(max_samples: int = None):
     logger.info("=" * 80)
     logger.info(f"\nPróximos passos:")
     logger.info(f"1. Verifique {settings.paths.dataset_file}")
-    logger.info(f"2. Execute: python scripts/2_train_and_infer.py --action train")
+    logger.info(f"2. Execute: python scripts/train_and_infer.py --action train")
 
     return True
 

@@ -140,7 +140,7 @@ class PipelineOrchestrator:
 
         if not self.skip_dataset:
             self.print_section("STEP 1/3: Gerando Dataset")
-            cmd = [str(self.venv_python), "scripts/generate_dataset.py"]
+            cmd = [str(self.venv_python), "scripts/dataset/generate_dataset.py"]
             if not self.run_command(cmd, "Geração de Dataset"):
                 self.print_error("Pipeline abortado: falha na geração do dataset")
                 return False

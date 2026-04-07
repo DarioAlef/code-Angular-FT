@@ -10,7 +10,7 @@ Certifique-se de que o `.env` possui uma `GROQ_API_KEY` válida.
 ### 2. Gerar Dataset
 Extrai componentes base e gera variações de instruções usando a API do Groq:
 ```bash
-uv run scripts/generate_dataset.py
+uv run scripts/dataset/generate_dataset.py
 ```
 
 ### 3. Treinar e Testar

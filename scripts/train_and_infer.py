@@ -3,9 +3,9 @@
 Script 2: Treina adaptador LoRA com Unsloth + Avalia ANTES/DEPOIS.
 
 Uso:
-    python scripts/2_train_and_infer.py --action train
-    python scripts/2_train_and_infer.py --action infer
-    python scripts/2_train_and_infer.py --action both
+    python scripts/train_and_infer.py --action train
+    python scripts/train_and_infer.py --action infer
+    python scripts/train_and_infer.py --action both
 """
 
 import argparse
@@ -71,7 +71,7 @@ def train_model():
     dataset_path = settings.paths.dataset_file
     if not dataset_path.exists():
         logger.error(f"❌ Dataset não encontrado: {dataset_path}")
-        logger.error("   Execute primeiro: python scripts/1_generate_dataset.py")
+        logger.error("   Execute primeiro: python scripts/dataset/generate_dataset.py")
         return False
 
     try:

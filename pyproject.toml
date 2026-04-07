@@ -25,10 +25,10 @@ dependencies = [
 ]
 
 [project.scripts]
-fpftech-generate = "scripts.generate_dataset:main"
+fpftech-generate = "scripts.dataset.generate_dataset:main"
 fpftech-train = "scripts.train_and_infer:main"
-fpftech-export = "scripts.export_model:export_model"
-fpftech-chat = "scripts.interactive_chat:start_chat"
+fpftech-export = "scripts.tools.export_model:export_model"
+fpftech-chat = "scripts.analyze_and_test.interactive_chat:start_chat"
 fpftech-validate = "src.evaluation.validator:main"
 
 [tool.setuptools]

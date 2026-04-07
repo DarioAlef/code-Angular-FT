@@ -1,4 +1,3 @@
-# src/providers/groq_client.py
 import json
 import logging
 import time
@@ -32,7 +31,6 @@ class GroqInstructionGenerator:
             Lista com 5 instruções em português, ou None se falhar
         """
         try:
-            # Trunca código muito longo para prompt
             code = component_code[:1200] + "..." if len(component_code) > 1200 else component_code
 
             response = self.client.chat.completions.create(
@@ -65,11 +63,9 @@ Retorne JSON: {"instructions": ["instr1", "instr2", "instr3", "instr4", "instr5"
                 stop=None,
             )
 
-            # Extrai resposta
             content = response.choices[0].message.content.strip()
             instructions = json.loads(content)
 
-            # Assegura que o resultado seja uma lista
             result_list = []
             if isinstance(instructions, list) and len(instructions) >= 5:
                 result_list = instructions[:5]
@@ -79,11 +75,9 @@ Retorne JSON: {"instructions": ["instr1", "instr2", "instr3", "instr4", "instr5"
                 logger.warning(f"Formato inesperado: {type(instructions)}")
                 return None
             
-            # Assegura que cada instrução seja estritamente uma string (às vezes o modelo retorna dicionários)
             cleaned_instructions = []
             for instr in result_list:
                 if isinstance(instr, dict):
-                    # Se for {"instrução1": "texto"}, extrai o primeiro valor
                     instr_val = str(list(instr.values())[0])
                 else:
                     instr_val = str(instr)

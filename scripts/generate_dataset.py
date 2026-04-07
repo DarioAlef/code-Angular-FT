@@ -11,8 +11,8 @@ import argparse
 import sys
 from src.providers.groq_client import GroqInstructionGenerator
 from src.utils.config import settings
-from src.data.generator import DatasetGenerator
-from src.data.validator import DatasetValidator
+from src.preprocessing_dataset.generator import DatasetGenerator
+from src.preprocessing_dataset.validator import DatasetValidator
 from src.utils.logging import setup_logging
 
 
@@ -23,7 +23,6 @@ def main(max_samples: int = None):
     Args:
         max_samples: Número máximo de componentes a processar
     """
-    # Setup
     logger = setup_logging(level="INFO")
     settings.paths.ensure_dirs()
 
@@ -31,14 +30,12 @@ def main(max_samples: int = None):
     logger.info("GERAÇÃO DE DATASET COM GROQ + VARIAÇÕES")
     logger.info("=" * 80)
 
-    # Valida API key
     if not settings.groq.api_key:
         logger.error("❌ GROQ_API_KEY não configurada no .env!")
         return False
 
     logger.info(f"✅ Usando: {settings.groq.model}")
 
-    # Inicializa Groq (carrega .env automaticamente)
     try:
         groq = GroqInstructionGenerator()
         logger.info("✅ Groq cliente inicializado")
@@ -46,7 +43,6 @@ def main(max_samples: int = None):
         logger.error(f"❌ Erro ao inicializar Groq: {e}")
         return False
 
-    # Gera dataset
     generator = DatasetGenerator(groq)
 
     try:
@@ -63,17 +59,14 @@ def main(max_samples: int = None):
         logger.error("❌ Nenhum componente foi processado!")
         return False
 
-    # Valida dataset
     if not DatasetValidator.validate(dataset):
         logger.error("❌ Dataset falhou na validação!")
         return False
 
-    # Imprime estatísticas
     DatasetValidator.print_stats(dataset)
 
     logger.info(f"\n✅ Dataset salvo em: {settings.paths.dataset_file}")
 
-    # Preview
     logger.info("\n" + "=" * 80)
     logger.info(f"PREVIEW: Primeiros 2 exemplos")
     logger.info("=" * 80)

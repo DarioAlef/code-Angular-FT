@@ -21,7 +21,6 @@ from pathlib import Path
 from datetime import datetime
 from src.utils.config import settings
 
-# Cores para output
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -38,7 +37,6 @@ class PipelineOrchestrator:
         self.project_root = Path(__file__).resolve().parent.parent
         self.venv_python = self.project_root / ".venv" / "bin" / "python3"
 
-        # Fallback para python3 do sistema
         if not self.venv_python.exists():
             self.venv_python = sys.executable
 
@@ -136,12 +134,10 @@ class PipelineOrchestrator:
         """Executa pipeline completo"""
         self.print_header(f"PIPELINE COMPLETO - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-        # Valida dependências
         if not self.validate_dependencies():
             self.print_error("Instale as dependências e tente novamente")
             return False
 
-        # Step 1: Dataset
         if not self.skip_dataset:
             self.print_section("STEP 1/3: Gerando Dataset")
             cmd = [str(self.venv_python), "scripts/generate_dataset.py"]
@@ -154,7 +150,6 @@ class PipelineOrchestrator:
                 self.print_error("Dataset não encontrado e geração foi pulada")
                 return False
 
-        # Step 2: Treinamento
         if not self.skip_train:
             self.print_section("STEP 2/3: Treinamento com Unsloth + QLoRA")
             cmd = [
@@ -169,7 +164,6 @@ class PipelineOrchestrator:
         else:
             self.print_info("⏭️  Pulando treinamento")
 
-        # Step 3: Inferência
         if not self.skip_infer:
             self.print_section("STEP 3/3: Inferência e Comparação")
             cmd = [
@@ -184,7 +178,6 @@ class PipelineOrchestrator:
         else:
             self.print_info("⏭️  Pulando inferência")
 
-        # Sucesso
         self.print_header("✨ PIPELINE CONCLUÍDO COM SUCESSO!")
         self.print_success("Artefatos gerados:")
         self.print_info(f"• {settings.paths.dataset_file.name} - Dataset de treinamento")

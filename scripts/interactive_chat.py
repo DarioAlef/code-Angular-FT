@@ -1,10 +1,8 @@
-# scripts/4_interactive_chat.py
 import logging
 import sys
 from src.models.inference import ModelInference
 from src.utils.config import settings
 
-# Configura logging para ser menos verboso no chat
 logging.basicConfig(level=logging.ERROR)
 
 def start_chat():
@@ -15,7 +13,6 @@ def start_chat():
     print(f"Aplicando adaptador de: {settings.paths.adapter_dir}")
     print("Configurado para 4-bit (economiza VRAM)...")
     
-    # Inicializa o inferenciador
     inference = ModelInference(
         model_id=settings.model_id,
         adapter_path=str(settings.paths.adapter_dir),
@@ -23,7 +20,6 @@ def start_chat():
     )
     
     try:
-        # Carrega modelo e faz merge do adaptador em memória para inferência
         inference.load_with_adapter()
     except Exception as e:
         print(f"\n❌ Erro ao carregar modelo: {e}")
@@ -48,7 +44,6 @@ def start_chat():
             print("\n🤖 FPFtech Coder (Gerando...):")
             print("-" * 30)
             
-            # Realiza a inferência
             response = inference.generate_code(
                 prompt,
                 max_tokens=settings.inference_max_tokens,

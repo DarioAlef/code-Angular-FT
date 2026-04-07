@@ -1,4 +1,3 @@
-# src/training/trainer.py
 import logging
 from pathlib import Path
 from transformers import EarlyStoppingCallback
@@ -38,7 +37,6 @@ class QLoRATrainer:
             output_dir=self.output_dir,
         )
 
-        # Formata dataset usando apply_chat_template nativo
         logger.info("📝 Formatando dataset com apply_chat_template...")
         dataset_formatted = dataset.map(
             lambda examples: self._format_with_chat_template(examples, tokenizer),
@@ -58,7 +56,6 @@ class QLoRATrainer:
             callbacks=[EarlyStoppingCallback(early_stopping_patience=self.config.early_stopping_patience)],
         )
 
-        # CRÍTICO: Mascara loss nos tokens system/user (treina APENAS nas respostas)
         trainer = train_on_responses_only(
             trainer,
             instruction_part="<|im_start|>user\n",

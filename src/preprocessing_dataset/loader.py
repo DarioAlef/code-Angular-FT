@@ -1,4 +1,3 @@
-# src/data/loader.py
 import json
 import logging
 from pathlib import Path
@@ -10,7 +9,6 @@ from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Padrões obrigatórios que todo exemplo BaseComponent deve conter
 REQUIRED_PATTERNS = ["extends BaseComponent", "createFormGroup", "Injector"]
 
 
@@ -57,14 +55,11 @@ class DatasetLoader:
 
                 item = json.loads(line)
 
-                # Formato novo: já tem messages
                 if "messages" in item:
                     data.append(item)
                     continue
 
-                # Formato antigo: instruction/response -> converte
                 if "instruction" in item and "response" in item:
-                    # Filtra exemplos que não seguem padrão BaseComponent
                     if not is_valid_basecomponent(item["response"]):
                         filtered += 1
                         logger.debug(

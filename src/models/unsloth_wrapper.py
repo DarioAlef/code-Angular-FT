@@ -1,4 +1,3 @@
-# src/models/unsloth_wrapper.py
 from unsloth import FastLanguageModel
 from unsloth.chat_templates import get_chat_template
 import logging
@@ -29,6 +28,8 @@ class UnslothModel:
         self.dtype = dtype
         self.load_in_4bit = load_in_4bit
 
+
+
     def load_model(self) -> Tuple:
         """
         Carrega modelo com FastLanguageModel e aplica chat template nativo Qwen 2.5.
@@ -45,12 +46,13 @@ class UnslothModel:
             load_in_4bit=self.load_in_4bit,
         )
 
-        # Aplica chat template NATIVO do Qwen 2.5 (ChatML com <|im_start|>)
         tokenizer = get_chat_template(tokenizer, chat_template="qwen-2.5")
         logger.info("✅ Chat template Qwen 2.5 aplicado ao tokenizer")
 
         logger.info(f"✅ Modelo carregado")
         return model, tokenizer
+
+
 
     def setup_lora(self, model, rank: int = 16, alpha: int = 16, dropout: float = 0.05):
         """

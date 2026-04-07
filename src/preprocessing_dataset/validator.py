@@ -1,4 +1,3 @@
-# src/data/validator.py
 import logging
 from typing import Dict, List
 
@@ -21,7 +20,6 @@ class DatasetValidator:
             return False
 
         for idx, item in enumerate(dataset):
-            # Formato novo: messages
             if "messages" in item:
                 messages = item["messages"]
                 if not isinstance(messages, list) or len(messages) < 2:
@@ -40,7 +38,6 @@ class DatasetValidator:
                     logger.error(f"❌ Exemplo {idx}: resposta do assistant vazia")
                     return False
 
-            # Formato antigo: instruction/response
             elif "instruction" in item and "response" in item:
                 if not item["instruction"].strip():
                     logger.warning(f"⚠️  Exemplo {idx} tem instrução vazia")

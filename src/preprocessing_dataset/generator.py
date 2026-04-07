@@ -1,4 +1,3 @@
-# src/data/generator.py
 import json
 import logging
 from pathlib import Path
@@ -7,7 +6,7 @@ from typing import Optional, List, Dict
 from tqdm import tqdm
 
 from src.providers.groq_client import GroqInstructionGenerator
-from src.data.loader import is_valid_basecomponent
+from src.preprocessing_dataset.loader import is_valid_basecomponent
 from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,6 @@ def load_boundary_examples(path: Path) -> List[Dict]:
                 if not line.strip():
                     continue
                 item = json.loads(line)
-                # Injeta o system prompt atual
                 if "messages" in item:
                     for msg in item["messages"]:
                         if msg["role"] == "system" and msg["content"] == "SYSTEM_PROMPT_PLACEHOLDER":
@@ -36,7 +34,6 @@ def load_boundary_examples(path: Path) -> List[Dict]:
     
     return examples
 
-# Define o path fixo para os exemplos de fronteira
 BOUNDARY_EXAMPLES_PATH = settings.paths.data / "boundary_examples.jsonl"
 BOUNDARY_EXAMPLES = load_boundary_examples(BOUNDARY_EXAMPLES_PATH)
 
@@ -99,7 +96,6 @@ class DatasetGenerator:
                     failed += 1
                     continue
 
-                # Filtra componentes que não seguem padrão BaseComponent
                 if not is_valid_basecomponent(code):
                     filtered += 1
                     logger.debug(f"Filtrado: {comp_file.name} (não estende BaseComponent)")
@@ -113,7 +109,6 @@ class DatasetGenerator:
 
                 for instruction in instructions:
                     if instruction.strip():
-                        # Formato conversacional com system prompt
                         item = {
                             "messages": [
                                 {"role": "system", "content": settings.system_prompt},
@@ -125,7 +120,6 @@ class DatasetGenerator:
                         f.write(json.dumps(item, ensure_ascii=False) + "\n")
                         f.flush()
 
-            # Adiciona exemplos de recusa/fronteira
             logger.info(f"📝 Adicionando {len(BOUNDARY_EXAMPLES)} exemplos de recusa/fronteira...")
             for item in BOUNDARY_EXAMPLES:
                 dataset.append(item)

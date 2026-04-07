@@ -8,9 +8,9 @@ Uso:
 """
 import json
 import sys
-from utils.config import settings
-from src.data.loader import is_valid_basecomponent, convert_to_conversation
-from src.data.generator import BOUNDARY_EXAMPLES
+from src.utils.config import settings
+from src.preprocessing_dataset.loader import is_valid_basecomponent, convert_to_conversation
+from src.preprocessing_dataset.generator import BOUNDARY_EXAMPLES
 
 INPUT_FILE = settings.paths.dataset_file
 OUTPUT_FILE = INPUT_FILE.parent / "augmented_dataset_v2.jsonl"
@@ -32,13 +32,11 @@ def main():
             total += 1
             item = json.loads(line)
 
-            # Já está no formato novo
             if "messages" in item:
                 fout.write(json.dumps(item, ensure_ascii=False) + "\n")
                 valid += 1
                 continue
 
-            # Formato antigo: filtra e converte
             if not is_valid_basecomponent(item.get("response", "")):
                 filtered += 1
                 continue
@@ -47,7 +45,6 @@ def main():
             fout.write(json.dumps(conv, ensure_ascii=False) + "\n")
             valid += 1
 
-        # Adiciona exemplos de fronteira
         for item in BOUNDARY_EXAMPLES:
             fout.write(json.dumps(item, ensure_ascii=False) + "\n")
             valid += 1

@@ -6,7 +6,6 @@ Script de verificação: valida setup antes de rodar pipeline.
 import sys
 from pathlib import Path
 
-# Cores
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -32,7 +31,6 @@ def main():
     all_ok = True
     project_root = Path(__file__).resolve().parent.parent
 
-    # 1. Dependências
     print(f"{BOLD}📦 Dependências:{RESET}\n")
 
     deps = {
@@ -58,7 +56,6 @@ def main():
         print(f"{RED}❌ Erro crítico: Pacote 'src' não encontrado. Execute 'pip install -e .' primeiro.{RESET}")
         sys.exit(1)
 
-    # 2. Arquivos/Diretórios
     print(f"\n{BOLD}📁 Estrutura:{RESET}\n")
 
     checks = [
@@ -80,7 +77,6 @@ def main():
             all_ok = False
             check(False, "", f"{name}: NÃO ENCONTRADO")
 
-    # 3. Configuração
     print(f"\n{BOLD}⚙️  Configuração:{RESET}\n")
 
     checks_config = [
@@ -97,7 +93,6 @@ def main():
             all_ok = False
             check(False, "", msg)
 
-    # 4. Resumo
     print(f"\n{BOLD}{BLUE}{'=' * 80}{RESET}")
     if all_ok:
         print(f"{GREEN}✅ SETUP OK! Pronto para rodar:{RESET}")

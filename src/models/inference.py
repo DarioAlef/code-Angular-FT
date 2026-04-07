@@ -1,4 +1,3 @@
-# src/models/inference.py
 import json
 import logging
 from pathlib import Path
@@ -13,7 +12,6 @@ from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Fallback template para modelos Qwen que não possuem chat_template definido
 QWEN_CHAT_TEMPLATE = (
     "{% for message in messages %}"
     "{{'<|im_start|>' + message['role'] + '\\n' + message['content'] + '<|im_end|>\\n'}}"
@@ -41,6 +39,8 @@ class ModelInference:
         self.model = None
         self.tokenizer = None
 
+
+
     def _get_model_kwargs(self):
         """Retorna kwargs comuns para carregar o modelo"""
         kwargs = {
@@ -58,6 +58,8 @@ class ModelInference:
             kwargs["torch_dtype"] = torch.float16
         return kwargs
 
+
+
     def _setup_tokenizer(self):
         """Configura tokenizer com chat template e pad token"""
         if self.tokenizer.chat_template is None:
@@ -65,11 +67,12 @@ class ModelInference:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
+
+
     def load_base_model(self):
         """Carrega modelo base sem adaptador usando Unsloth para consistência"""
         logger.info(f"📥 Carregando modelo base: {self.model_id}")
         
-        # Usamos Unsloth para carregar o modelo base também, evitando conflitos de patch
         self.model, self.tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.model_id,
             max_seq_length=settings.training.max_seq_length,
@@ -81,6 +84,8 @@ class ModelInference:
         self._setup_tokenizer()
         logger.info("✅ Modelo base carregado (via Unsloth)")
 
+
+
     def load_with_adapter(self):
         """Carrega modelo com adaptador LoRA usando Unsloth"""
         if not self.adapter_path:
@@ -88,7 +93,6 @@ class ModelInference:
 
         logger.info(f"📥 Carregando modelo + adaptador: {self.adapter_path}")
         
-        # Unsloth carrega o adaptador automaticamente se o caminho for passado em model_name
         self.model, self.tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.adapter_path,
             max_seq_length=settings.training.max_seq_length,
@@ -100,6 +104,8 @@ class ModelInference:
         self._setup_tokenizer()
         logger.info("✅ Modelo com adaptador carregado (via Unsloth)")
 
+
+
     def post_process(self, text: str, prompt: Optional[str] = None) -> str:
         """
         Limpa o texto gerado removendo APENAS tokens especiais.
@@ -108,7 +114,6 @@ class ModelInference:
         if not text:
             return ""
 
-        # Remove APENAS tokens especiais de controle
         special_tokens = [
             "<|im_start|>", "<|im_end|>",
             "<|endoftext|>", "<|file_separator|>",
@@ -118,7 +123,6 @@ class ModelInference:
         for token in special_tokens:
             text = text.replace(token, "")
 
-        # Remove artefato de path no início (Qwen Coder às vezes gera isso)
         if text.startswith("/src/") or text.startswith("src/"):
             if "\nimport " in text:
                 _, text = text.split("\nimport ", 1)
@@ -128,6 +132,8 @@ class ModelInference:
                 text = "@Component" + text
 
         return text.strip()
+
+
 
     def generate_code(
         self,
@@ -143,13 +149,11 @@ class ModelInference:
         if self.model is None or self.tokenizer is None:
             raise ValueError("Modelo não foi carregado!")
 
-        # Monta mensagens no MESMO formato do treino (com system prompt)
         messages = [
             {"role": "system", "content": settings.system_prompt},
             {"role": "user", "content": prompt},
         ]
 
-        # Usa apply_chat_template para garantir alinhamento treino/inferência
         formatted_prompt = self.tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
@@ -169,12 +173,13 @@ class ModelInference:
                 pad_token_id=self.tokenizer.eos_token_id,
             )
 
-        # Decodifica APENAS os tokens novos
         input_length = inputs["input_ids"].shape[1]
         new_tokens = outputs[0][input_length:]
         response = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
 
         return self.post_process(response, prompt)
+
+
 
     def compare_models(
         self,

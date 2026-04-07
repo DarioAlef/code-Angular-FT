@@ -32,4 +32,4 @@ fpftech-chat = "scripts.interactive_chat:start_chat"
 fpftech-validate = "src.evaluation.validator:main"
 
 [tool.setuptools]
-packages = ["src", "src.utils", "src.data", "src.models", "src.training", "src.evaluation", "src.providers", "scripts"]
+packages = ["src", "src.utils", "src.preprocessing_dataset", "src.models", "src.training", "src.evaluation", "src.providers", "scripts"]

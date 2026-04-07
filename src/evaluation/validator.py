@@ -1,4 +1,3 @@
-# src/evaluation/validator.py
 """
 Validador estrutural para código gerado pelo modelo fine-tuned.
 Verifica se o código segue o padrão BaseComponent da FPFtech.
@@ -15,7 +14,6 @@ from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Padrões obrigatórios (peso 1.0) - todo componente FPFtech DEVE ter
 REQUIRED_PATTERNS = {
     "extends BaseComponent": r"extends\s+BaseComponent",
     "createFormGroup()": r"createFormGroup\s*\(",
@@ -24,7 +22,6 @@ REQUIRED_PATTERNS = {
     "super(injector": r"super\s*\(\s*injector",
 }
 
-# Padrões desejáveis (peso 0.5) - bom ter, mas não obrigatório
 DESIRED_PATTERNS = {
     "formBuilder.group": r"formBuilder\.group\s*\(",
     "Validators": r"Validators\.",
@@ -33,7 +30,6 @@ DESIRED_PATTERNS = {
     "import BaseComponent": r"import\s*\{[^}]*BaseComponent",
 }
 
-# Tokens proibidos (falha imediata) - indicam modelo não aprendeu
 FORBIDDEN_TOKENS = [
     "<|fim_prefix|>",
     "<|fim_suffix|>",
@@ -67,7 +63,6 @@ def validate_code(code: str, prompt: str) -> ValidationResult:
     """Valida um código gerado contra os padrões FPFtech BaseComponent"""
     result = ValidationResult(prompt=prompt)
 
-    # Verifica padrões obrigatórios
     for name, pattern in REQUIRED_PATTERNS.items():
         match = bool(re.search(pattern, code))
         result.required_matches[name] = match
@@ -76,7 +71,6 @@ def validate_code(code: str, prompt: str) -> ValidationResult:
     required_passed = sum(1 for v in result.required_matches.values() if v)
     result.required_score = required_passed / required_total if required_total > 0 else 0
 
-    # Verifica padrões desejáveis
     for name, pattern in DESIRED_PATTERNS.items():
         match = bool(re.search(pattern, code))
         result.desired_matches[name] = match
@@ -85,7 +79,6 @@ def validate_code(code: str, prompt: str) -> ValidationResult:
     desired_passed = sum(1 for v in result.desired_matches.values() if v)
     result.desired_score = desired_passed / desired_total if desired_total > 0 else 0
 
-    # Verifica tokens proibidos
     for token in FORBIDDEN_TOKENS:
         if token in code:
             result.forbidden_found.append(token)
@@ -123,17 +116,14 @@ def print_report(validations: List[ValidationResult]):
         print(f"\n{'─'*60}")
         print(f"  [{i}] {status} | Score: {v.total_score:.0%} | Prompt: {v.prompt[:60]}...")
 
-        # Obrigatórios
         for name, matched in v.required_matches.items():
             icon = "✅" if matched else "❌"
             print(f"      {icon} [REQ] {name}")
 
-        # Desejáveis
         for name, matched in v.desired_matches.items():
             icon = "✅" if matched else "⚠️"
             print(f"      {icon} [DES] {name}")
 
-        # Proibidos
         if v.forbidden_found:
             for token in v.forbidden_found:
                 print(f"      🚫 [PROIBIDO] {token}")
@@ -142,7 +132,6 @@ def print_report(validations: List[ValidationResult]):
         if v.passed:
             total_passed += 1
 
-    # Resumo
     total = len(validations)
     pass_rate = total_passed / total if total > 0 else 0
     avg_required = sum(v.required_score for v in validations) / total if total > 0 else 0

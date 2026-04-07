@@ -13,17 +13,15 @@ import sys
 import torch
 import gc
 from src.utils.config import settings
-from src.data.loader import DatasetLoader
+from src.preprocessing_dataset.loader import DatasetLoader
 from src.models.unsloth_wrapper import UnslothModel
 from src.models.inference import ModelInference
 from src.training.trainer import QLoRATrainer
 from src.utils.logging import setup_logging
 import os
 
-# Configura GPU baseado no settings
 os.environ["CUDA_VISIBLE_DEVICES"] = settings.cuda_visible_devices
 
-# Prompts de teste
 TEST_PROMPTS = [
     "Crie um componente Angular para listar empresas com paginação",
     "Faça um componente que estende BaseComponent para gerenciar usuários",
@@ -50,7 +48,6 @@ def train_model():
     logger.info(f"LR: {settings.training.learning_rate} | Épocas: {settings.training.num_epochs} | Batch: {settings.training.batch_size}")
     logger.info(f"LoRA: r={settings.lora.rank}, alpha={settings.lora.alpha}, dropout={settings.lora.dropout}")
 
-    # Carrega modelo
     logger.info("\n📥 Carregando modelo...")
     unsloth = UnslothModel(
         model_id=settings.model_id,
@@ -70,7 +67,6 @@ def train_model():
         logger.error(f"❌ Erro ao carregar modelo: {e}")
         return False
 
-    # Carrega dataset (formato conversacional com system prompt + filtro)
     logger.info("\n📂 Carregando dataset...")
     dataset_path = settings.paths.dataset_file
     if not dataset_path.exists():
@@ -88,7 +84,6 @@ def train_model():
         logger.error(f"❌ Erro ao carregar dataset: {e}")
         return False
 
-    # Treina
     logger.info("\n🔄 Iniciando treinamento...")
     settings.paths.ensure_dirs()
 
@@ -103,7 +98,6 @@ def train_model():
         logger.error(f"❌ Erro durante treinamento: {e}")
         return False
 
-    # Salva adaptador E tokenizer (para inferência usar mesmo template)
     logger.info(f"\n💾 Salvando adaptador + tokenizer em {settings.paths.adapter_dir}...")
     try:
         settings.paths.adapter_dir.mkdir(parents=True, exist_ok=True)
@@ -131,7 +125,6 @@ def infer_model():
     logger.info("📊 INFERÊNCIA: ANTES vs DEPOIS (v2)")
     logger.info("=" * 80)
 
-    # 1. Carrega modelo base e gera respostas
     logger.info("\n📥 Carregando modelo base...")
     base_responses = []
     try:
@@ -144,7 +137,6 @@ def infer_model():
             logger.info(f"  [{i}/{len(TEST_PROMPTS)}] BASE...")
             base_responses.append(base_inf.generate_code(prompt, max_tokens=settings.inference_max_tokens))
 
-        # Limpa memória explicitamente
         del base_inf
         torch.cuda.empty_cache()
         gc.collect()
@@ -153,7 +145,6 @@ def infer_model():
         logger.error(f"❌ Erro no modelo base: {e}")
         return False
 
-    # 2. Carrega modelo fine-tuned e gera respostas
     logger.info("\n📥 Carregando modelo fine-tuned...")
     if not settings.paths.adapter_dir.exists():
         logger.error(f"❌ Adaptador não encontrado: {settings.paths.adapter_dir}")
@@ -177,7 +168,6 @@ def infer_model():
         logger.error(f"❌ Erro no modelo fine-tuned: {e}")
         return False
 
-    # 3. Consolida resultados
     results = []
     for prompt, base, ft in zip(TEST_PROMPTS, base_responses, ft_responses):
         results.append({
@@ -190,7 +180,6 @@ def infer_model():
         logger.info(f"✅ BASE: {base[:100]}...")
         logger.info(f"✅ FINE-TUNED: {ft[:100]}...")
 
-    # Salva relatório
     logger.info(f"\n💾 Salvando relatório em {settings.paths.comparison_report}...")
     try:
         ModelInference.save_comparison_report(results, settings.paths.comparison_report)

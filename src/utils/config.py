@@ -1,9 +1,7 @@
-# src/utils/config.py
 from pathlib import Path
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
-# Root absoluto do projeto (não depende de CWD)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
@@ -52,20 +50,16 @@ class PathsConfig(BaseModel):
 
 
 class Settings(BaseSettings):
-    # Groq (from .env)
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"
 
-    # Compostos
     groq: GroqConfig = GroqConfig()
     lora: LoraConfig = LoraConfig()
     training: TrainingConfig = TrainingConfig()
     paths: PathsConfig = PathsConfig()
 
-    # Modelo
     model_id: str = "unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit"
 
-    # System prompt (usado no treino E na inferência)
     system_prompt: str = (
         "Você é o FPFtech Angular Coder. Gere APENAS código TypeScript Angular "
         "seguindo o padrão BaseComponent da FPFtech. Todo componente DEVE: "
@@ -74,11 +68,9 @@ class Settings(BaseSettings):
         "herdados (toast, translate, service, router). Responda SOMENTE com código."
     )
 
-    # Inferência
     inference_temperature: float = 0.1
     inference_max_tokens: int = 2048
 
-    # Ambiente
     cuda_visible_devices: str = "0"
 
     class Config:
@@ -86,7 +78,6 @@ class Settings(BaseSettings):
         case_sensitive = False
 
     def model_post_init(self, __context):
-        # Sincroniza groq_api_key do .env com sub-modelo
         if self.groq_api_key:
             self.groq.api_key = self.groq_api_key
 

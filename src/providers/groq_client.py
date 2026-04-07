@@ -58,7 +58,7 @@ Retorne JSON: {"instructions": ["instr1", "instr2", "instr3", "instr4", "instr5"
                         "content": f"Componente:\n```typescript\n{code}\n```\n\nRetorne 5 instruções diferentes em um objeto JSON (chave 'instructions')."
                     }
                 ],
-                max_completion_tokens=512,  # 5 instruções em JSON, sem código
+                max_completion_tokens=2048,  # Suficiente para 5 strings com folga
                 temperature=self.temperature,
                 response_format={"type": "json_object"},
                 top_p=0.95,
@@ -69,15 +69,27 @@ Retorne JSON: {"instructions": ["instr1", "instr2", "instr3", "instr4", "instr5"
             content = response.choices[0].message.content.strip()
             instructions = json.loads(content)
 
-            # Valida formato
+            # Assegura que o resultado seja uma lista
+            result_list = []
             if isinstance(instructions, list) and len(instructions) >= 5:
-                return instructions[:5]
+                result_list = instructions[:5]
             elif isinstance(instructions, dict) and "instructions" in instructions:
-                # Fallback se Groq retorna {"instructions": [...]}
-                return instructions["instructions"][:5]
+                result_list = instructions["instructions"][:5]
             else:
                 logger.warning(f"Formato inesperado: {type(instructions)}")
                 return None
+            
+            # Assegura que cada instrução seja estritamente uma string (às vezes o modelo retorna dicionários)
+            cleaned_instructions = []
+            for instr in result_list:
+                if isinstance(instr, dict):
+                    # Se for {"instrução1": "texto"}, extrai o primeiro valor
+                    instr_val = str(list(instr.values())[0])
+                else:
+                    instr_val = str(instr)
+                cleaned_instructions.append(instr_val)
+                
+            return cleaned_instructions
 
         except json.JSONDecodeError:
             logger.error(f"JSON inválido de Groq")

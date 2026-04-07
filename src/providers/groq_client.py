@@ -3,9 +3,7 @@ import json
 import logging
 import time
 from typing import List, Optional
-
 from groq import Groq
-
 from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -44,7 +42,7 @@ class GroqInstructionGenerator:
                         "role": "system",
                         "content": """Você é expert Angular. Analise o componente e gere 5 instruções DIFERENTES em PT-BR que um dev daria para criar esse código.
 
-IMPORTANTE: Retorne APENAS as 5 instruções, não o código. O código já existe e será reutilizado.
+IMPORTANTE: Retorne APENAS um objeto JSON com a chave "instructions" contendo as 5 strings. Não inclua o código.
 
 Formatos dos 5 prompts:
 1. Técnico: menciona BaseComponent, Injector, tipos genéricos
@@ -53,11 +51,11 @@ Formatos dos 5 prompts:
 4. Negócio: qual problema resolve
 5. Ação: imperativo direto
 
-Retorne JSON array: ["instr1", "instr2", "instr3", "instr4", "instr5"]"""
+Retorne JSON: {"instructions": ["instr1", "instr2", "instr3", "instr4", "instr5"]}"""
                     },
                     {
                         "role": "user",
-                        "content": f"Componente:\n```typescript\n{code}\n```\n\nRetorne 5 instruções diferentes em JSON array (APENAS as instruções, sem o código)."
+                        "content": f"Componente:\n```typescript\n{code}\n```\n\nRetorne 5 instruções diferentes em um objeto JSON (chave 'instructions')."
                     }
                 ],
                 max_completion_tokens=512,  # 5 instruções em JSON, sem código

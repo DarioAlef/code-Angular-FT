@@ -8,7 +8,7 @@ Uso:
 """
 import json
 import sys
-from src.utils.config import settings
+from utils.config import settings
 from src.data.loader import is_valid_basecomponent, convert_to_conversation
 from src.data.generator import BOUNDARY_EXAMPLES
 

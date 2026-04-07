@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 class GroqConfig(BaseModel):
     api_key: str = ""
-    model: str = "openai/gpt-oss-20b"
+    model: str = "openai/gpt-oss-120b"
     max_tokens: int = 2048
     temperature: float = 0.7
     timeout: int = 45
@@ -19,17 +19,17 @@ class GroqConfig(BaseModel):
 class LoraConfig(BaseModel):
     rank: int = 16
     alpha: int = 16
-    dropout: float = 0.05
+    dropout: float = 0.0
 
 
 class TrainingConfig(BaseModel):
     num_epochs: int = 3
     max_steps: int = -1
-    batch_size: int = 2
+    batch_size: int = 1
     learning_rate: float = 5e-5
-    gradient_accumulation_steps: int = 4
+    gradient_accumulation_steps: int = 8
     early_stopping_patience: int = 3
-    max_seq_length: int = 2048
+    max_seq_length: int = 1024
     train_split: float = 0.9
     seed: int = 42
 
@@ -54,7 +54,7 @@ class PathsConfig(BaseModel):
 class Settings(BaseSettings):
     # Groq (from .env)
     groq_api_key: str = ""
-    groq_model: str = "openai/gpt-oss-20b"
+    groq_model: str = "openai/gpt-oss-120b"
 
     # Compostos
     groq: GroqConfig = GroqConfig()

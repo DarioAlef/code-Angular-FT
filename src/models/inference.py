@@ -6,7 +6,8 @@ from typing import Dict, List, Optional
 
 import torch
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from unsloth import FastLanguageModel
 
 from src.utils.config import settings
 
@@ -65,51 +66,39 @@ class ModelInference:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def load_base_model(self):
-        """Carrega modelo base sem adaptador"""
+        """Carrega modelo base sem adaptador usando Unsloth para consistência"""
         logger.info(f"📥 Carregando modelo base: {self.model_id}")
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, **self._get_model_kwargs()
+        
+        # Usamos Unsloth para carregar o modelo base também, evitando conflitos de patch
+        self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+            model_name=self.model_id,
+            max_seq_length=settings.training.max_seq_length,
+            load_in_4bit=self.load_in_4bit,
+            trust_remote_code=True,
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_id, trust_remote_code=True
-        )
+        
+        FastLanguageModel.for_inference(self.model)
         self._setup_tokenizer()
-        logger.info("✅ Modelo base carregado")
+        logger.info("✅ Modelo base carregado (via Unsloth)")
 
     def load_with_adapter(self):
-        """Carrega modelo com adaptador LoRA"""
+        """Carrega modelo com adaptador LoRA usando Unsloth"""
         if not self.adapter_path:
             raise ValueError("adapter_path não foi fornecido")
 
-        logger.info(f"📥 Carregando modelo base para adaptador: {self.model_id}")
-        base_model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, **self._get_model_kwargs()
+        logger.info(f"📥 Carregando modelo + adaptador: {self.adapter_path}")
+        
+        # Unsloth carrega o adaptador automaticamente se o caminho for passado em model_name
+        self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+            model_name=self.adapter_path,
+            max_seq_length=settings.training.max_seq_length,
+            load_in_4bit=self.load_in_4bit,
+            trust_remote_code=True,
         )
 
-        logger.info(f"🔧 Aplicando adaptador: {self.adapter_path}")
-        self.model = PeftModel.from_pretrained(base_model, self.adapter_path)
-
-        try:
-            self.model = self.model.merge_and_unload()
-            logger.info("✅ Adaptador merged para inferência rápida")
-        except Exception as e:
-            logger.warning(f"⚠️  Não foi possível fazer merge: {e}")
-
-        # Tenta carregar tokenizer do adapter (salvo junto), senão usa modelo base
-        adapter_tokenizer_path = Path(self.adapter_path)
-        if (adapter_tokenizer_path / "tokenizer_config.json").exists():
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                str(adapter_tokenizer_path), trust_remote_code=True
-            )
-            logger.info("✅ Tokenizer carregado do adaptador")
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, trust_remote_code=True
-            )
-            logger.info("⚠️  Tokenizer carregado do modelo base (não encontrado no adapter)")
-
+        FastLanguageModel.for_inference(self.model)
         self._setup_tokenizer()
-        logger.info("✅ Modelo com adaptador carregado")
+        logger.info("✅ Modelo com adaptador carregado (via Unsloth)")
 
     def post_process(self, text: str, prompt: Optional[str] = None) -> str:
         """

@@ -6,7 +6,7 @@ __pycache__/
 unsloth_compiled_cache/
 
 # Data and artifacts
-data/
+#data/
 checkpoints/
 adapter_qlora/
 skeleton-web/

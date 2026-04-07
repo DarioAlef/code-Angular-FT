@@ -3,7 +3,7 @@
 Este relatório apresenta as respostas geradas pelo modelo original e pelo modelo treinado para fins de auditoria técnica.
 
 ## 📈 Visualização de Métricas (Dashboard)
-![Dashboard de Treinamento](output_qlora_v2/metrics/training_dashboard.png)
+![Dashboard de Treinamento](training_dashboard.png)
 
 ---
 

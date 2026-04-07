@@ -44,4 +44,4 @@ uv run scripts/train_and_infer.py --action chat
 
 ---
 ## 📈 Visualização de Métricas (Dashboard)
-![Dashboard de Treinamento](data/output_qlora_v2/metrics/training_dashboard.png)
+![Dashboard de Treinamento](data/training_dashboard.png)

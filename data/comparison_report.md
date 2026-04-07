@@ -1,6 +1,11 @@
-# 📊 Relatorio de Comparacao: Modelo Base vs Fine-Tuned
+# 📊 Relatório de Comparação: Modelo Base vs Fine-Tuned
 
-Este relatorio apresenta as respostas geradas pelo modelo original e pelo modelo treinado para fins de auditoria tecnica.
+Este relatório apresenta as respostas geradas pelo modelo original e pelo modelo treinado para fins de auditoria técnica.
+
+## 📈 Visualização de Métricas (Dashboard)
+![Dashboard de Treinamento](output_qlora_v2/metrics/training_dashboard.png)
+
+---
 
 ## Exemplo 1
 **Prompt:** `Crie um componente Angular para listar empresas com paginação`

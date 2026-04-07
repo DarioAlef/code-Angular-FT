@@ -40,3 +40,8 @@ uv run scripts/train_and_infer.py --action chat
 - **Treino:** 3 Épocas | LR: 5e-5 | Scheduler: Cosine
 - **Otimização:** AdamW 8-bit | BF16 | Gradient Acc: 8
 - **Alvo:** Todos os módulos lineares (Attention + MLP)
+
+
+---
+## 📈 Visualização de Métricas (Dashboard)
+![Dashboard de Treinamento](data/output_qlora_v2/metrics/training_dashboard.png)

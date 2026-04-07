@@ -166,6 +166,7 @@ class ModelInference:
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_tokens,
+                max_length=None,
                 temperature=temperature,
                 top_p=top_p,
                 repetition_penalty=repetition_penalty,
@@ -216,10 +217,32 @@ class ModelInference:
     def save_comparison_report(
         results: List[Dict], output_file: Path
     ):
-        """Salva relatório de comparação."""
+        """Salva relatório de comparação em JSON e Markdown."""
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
-        logger.info(f"\n✅ Relatório salvo em: {output_file}")
+            json.dump(results, f, ensure_ascii=False, indent=4)
+        
+        md_file = output_file.with_suffix(".md")
+        md_content = "# 📊 Relatório de Comparação: Modelo Base vs Fine-Tuned\n\n"
+        
+        for i, res in enumerate(results, 1):
+            md_content += f"## Teste {i}\n"
+            md_content += f"**Prompt:** `{res['prompt']}`\n\n"
+            
+            for key in ["base_response", "ft_response"]:
+                title = "🔴 Modelo BASE" if "base" in key else "🟢 Modelo FINE-TUNED"
+                code = res.get(key, "").strip()
+                md_content += f"### {title}\n"
+                if not code.startswith("```"):
+                    md_content += f"```typescript\n{code}\n```\n\n"
+                else:
+                    md_content += f"{code}\n\n"
+            
+            md_content += "---\n\n"
+            
+        with open(md_file, "w", encoding="utf-8") as f:
+            f.write(md_content)
+            
+        logger.info(f"\n✅ Relatórios salvos em:\n📍 JSON: {output_file}\n📍 MD:   {md_file}")
 
 
 __all__ = ["ModelInference"]

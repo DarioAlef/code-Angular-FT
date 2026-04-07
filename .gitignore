@@ -6,10 +6,17 @@ __pycache__/
 unsloth_compiled_cache/
 
 # Data and artifacts
-#data/
-checkpoints/
-adapter_qlora/
-skeleton-web/
+data/adapter_qlora*/
+data/output_qlora*/
+data/merged_model/
+!data/output_qlora*/metrics/
+!data/output_qlora*/metrics/**
+
+# Heavy model files and optimization states
+**/*.safetensors
+**/*.pt
+**/*.pth
+**/*.bin
 
 # Python packaging
 *.egg-info/

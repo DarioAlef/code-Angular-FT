@@ -113,7 +113,7 @@ class DatasetGenerator:
                             "messages": [
                                 {"role": "system", "content": settings.system_prompt},
                                 {"role": "user", "content": instruction.strip()},
-                                {"role": "assistant", "content": code},
+                                {"role": "assistant", "content": f"```typescript\n{code}\n```"},
                             ]
                         }
                         dataset.append(item)

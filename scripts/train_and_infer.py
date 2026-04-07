@@ -8,17 +8,21 @@ Uso:
     python scripts/train_and_infer.py --action both
 """
 
-import argparse
+import os
 import sys
+import argparse
 import torch
 import gc
+
+# Configura logging ANTES de importar módulos que usam unsloth/transformers
+from src.utils.logging import setup_logging
+logger = setup_logging()
+
 from src.utils.config import settings
 from src.preprocessing_dataset.loader import DatasetLoader
 from src.models.unsloth_wrapper import UnslothModel
 from src.models.inference import ModelInference
 from src.training.trainer import QLoRATrainer
-from src.utils.logging import setup_logging
-import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = settings.cuda_visible_devices
 

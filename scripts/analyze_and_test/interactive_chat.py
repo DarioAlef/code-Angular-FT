@@ -1,9 +1,8 @@
-import logging
-import sys
+from src.utils.logging import setup_logging
 from src.models.inference import ModelInference
 from src.utils.config import settings
 
-logging.basicConfig(level=logging.ERROR)
+logger = setup_logging(level="ERROR")
 
 def start_chat():
     print("\n" + "="*50)

@@ -33,3 +33,10 @@ uv run scripts/train_and_infer.py --action chat
 
 ---
 *Fine-tuning pipeline powered by Unsloth* 🚀
+
+## 📊 Hiperparâmetros (Summary)
+- **Modelo:** Qwen2.5-Coder-3B (4-bit QLoRA)
+- **LORA:** Rank: 16 | Alpha: 16 | Dropout: 0.0
+- **Treino:** 3 Épocas | LR: 5e-5 | Scheduler: Cosine
+- **Otimização:** AdamW 8-bit | BF16 | Gradient Acc: 8
+- **Alvo:** Todos os módulos lineares (Attention + MLP)

@@ -25,77 +25,67 @@ class MetricsLoggerCallback(TrainerCallback):
         self.current_epoch = 0
         self.epoch_step_counter = {}
 
-    def on_step_end(self, args, state: TrainerState, control: TrainerControl, **kwargs):
-        """Chamado ao final de cada step"""
-        if state.log_history:
-            latest_log = state.log_history[-1]
-
+    def on_log(self, args, state: TrainerState, control: TrainerControl, logs=None, **kwargs):
+        """Chamado sempre que o Trainer gera um log (logging_steps)"""
+        if logs:
             step_data = {
                 "step": state.global_step,
-                "epoch": state.epoch if state.epoch else self.current_epoch,
+                "epoch": round(state.epoch, 4) if state.epoch else self.current_epoch,
             }
-
-            # Copia todos os campos disponíveis
-            if "loss" in latest_log:
-                step_data["train_loss"] = latest_log["loss"]
-            if "learning_rate" in latest_log:
-                step_data["learning_rate"] = latest_log["learning_rate"]
-            if "eval_loss" in latest_log:
-                step_data["eval_loss"] = latest_log["eval_loss"]
-
-            self.all_steps.append(step_data)
+            
+            # Captura métricas de treino
+            if "loss" in logs:
+                step_data["train_loss"] = logs["loss"]
+            if "learning_rate" in logs:
+                step_data["learning_rate"] = logs["learning_rate"]
+            if "grad_norm" in logs:
+                step_data["grad_norm"] = logs["grad_norm"]
+            
+            # Captura métricas de avaliação (se houver)
+            if "eval_loss" in logs:
+                step_data["eval_loss"] = logs["eval_loss"]
+            
+            if any(k in step_data for k in ["train_loss", "eval_loss", "grad_norm"]):
+                self.all_steps.append(step_data)
 
     def on_epoch_end(self, args, state: TrainerState, control: TrainerControl, **kwargs):
         """Chamado ao final de cada época"""
-        if state.epoch:
-            self.current_epoch = int(state.epoch)
-        else:
-            self.current_epoch += 1
+        epoch_num = int(round(state.epoch)) if state.epoch else self.current_epoch + 1
+        self.current_epoch = epoch_num
 
-        # Extrai métricas da última época dos logs
         epoch_metrics = {
-            "epoch": self.current_epoch,
+            "epoch": epoch_num,
             "step": state.global_step,
         }
 
-        # Busca nos logs da história
+        # Tenta pegar o último log de treino e avaliação
         if state.log_history:
+            # Busca reversa pelo último log que tenha os dados
             for log in reversed(state.log_history):
-                log_epoch = log.get("epoch")
-
-                # Procura por logs dessa época
-                if log_epoch == self.current_epoch:
-                    if "loss" in log:
-                        epoch_metrics["train_loss"] = log["loss"]
-                    if "learning_rate" in log:
-                        epoch_metrics["learning_rate"] = log["learning_rate"]
-                    if "eval_loss" in log:
-                        epoch_metrics["eval_loss"] = log["eval_loss"]
+                if "loss" in log and "train_loss" not in epoch_metrics:
+                    epoch_metrics["train_loss"] = log["loss"]
+                if "learning_rate" in log and "learning_rate" not in epoch_metrics:
+                    epoch_metrics["learning_rate"] = log["learning_rate"]
+                if "grad_norm" in log and "grad_norm" not in epoch_metrics:
+                    epoch_metrics["grad_norm"] = log["grad_norm"]
+                if "eval_loss" in log and "eval_loss" not in epoch_metrics:
+                    epoch_metrics["eval_loss"] = log["eval_loss"]
+                
+                # Para de procurar se já temos os principais
+                if all(k in epoch_metrics for k in ["train_loss", "learning_rate", "grad_norm"]):
                     break
 
-        self.metrics_by_epoch[self.current_epoch] = epoch_metrics
+        self.metrics_by_epoch[epoch_num] = epoch_metrics
 
-        # Log no console
+        # Log visual no console
         train_loss = epoch_metrics.get("train_loss", "N/A")
         eval_loss = epoch_metrics.get("eval_loss", "N/A")
         lr = epoch_metrics.get("learning_rate", "N/A")
 
-        if isinstance(train_loss, float):
-            train_loss_str = f"{train_loss:.4f}"
-        else:
-            train_loss_str = str(train_loss)
+        t_loss_str = f"{train_loss:.4f}" if isinstance(train_loss, (int, float)) else "N/A"
+        e_loss_str = f"{eval_loss:.4f}" if isinstance(eval_loss, (int, float)) else "N/A"
 
-        if isinstance(eval_loss, float):
-            eval_loss_str = f"{eval_loss:.4f}"
-        else:
-            eval_loss_str = str(eval_loss)
-
-        logger.info(
-            f"📊 Época {self.current_epoch}: "
-            f"train_loss={train_loss_str}, "
-            f"eval_loss={eval_loss_str}, "
-            f"lr={lr}"
-        )
+        logger.info(f"📊 Época {epoch_num} concluída: Step {state.global_step} | Loss Treino: {t_loss_str} | Loss Eval: {e_loss_str} | LR: {lr}")
 
     def on_train_end(self, args, state: TrainerState, control: TrainerControl, **kwargs):
         """Chamado ao final do treino"""

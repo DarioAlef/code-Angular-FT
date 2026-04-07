@@ -7,13 +7,15 @@ Uso:
     python scripts/dataset/generate_dataset.py                    # Todos
 """
 
-import argparse
 import sys
+import argparse
+from src.utils.logging import setup_logging
+setup_logging()
+
 from src.providers.groq_client import GroqInstructionGenerator
 from src.utils.config import settings
 from src.preprocessing_dataset.generator import DatasetGenerator
 from src.preprocessing_dataset.validator import DatasetValidator
-from src.utils.logging import setup_logging
 
 
 def main(max_samples: int = None):
